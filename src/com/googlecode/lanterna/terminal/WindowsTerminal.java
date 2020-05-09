@@ -4,9 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 
 import com.googlecode.lanterna.TerminalPosition;
 import com.googlecode.lanterna.TerminalSize;
+import com.googlecode.lanterna.input.BasicCharacterPattern;
+import com.googlecode.lanterna.input.CharacterPattern;
+import com.googlecode.lanterna.input.KeyDecodingProfile;
+import com.googlecode.lanterna.input.KeyStroke;
+import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.terminal.ansi.UnixLikeTerminal;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.ptr.IntByReference;
@@ -23,7 +29,17 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	}
 
 	public WindowsTerminal(InputStream terminalInput, OutputStream terminalOutput, Charset terminalCharset, CtrlCBehaviour terminalCtrlCBehaviour) throws IOException {
-		super(terminalInput, terminalOutput, terminalCharset, terminalCtrlCBehaviour);
+		super(new AsyncBlockingInputStream(terminalInput), terminalOutput, terminalCharset, terminalCtrlCBehaviour);
+	}
+
+	@Override
+	protected KeyDecodingProfile getDefaultKeyDecodingProfile() {
+		ArrayList<CharacterPattern> keyDecodingProfile = new ArrayList<CharacterPattern>();
+		// handle Key Code 13 as ENTER
+		keyDecodingProfile.add(new BasicCharacterPattern(new KeyStroke(KeyType.Enter), '\r'));
+		// handle everything else as per default
+		keyDecodingProfile.addAll(super.getDefaultKeyDecodingProfile().getPatterns());
+		return () -> keyDecodingProfile;
 	}
 
 	@Override
