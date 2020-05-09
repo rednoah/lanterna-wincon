@@ -2,9 +2,8 @@ package com.googlecode.lanterna.terminal;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Standard Input on Windows will always report available() == 0 so we need to
@@ -24,7 +23,7 @@ public class AsyncBlockingInputStream extends InputStream implements Runnable {
 		executor.execute(this);
 	}
 
-	private final LinkedBlockingQueue<Integer> queue = new LinkedBlockingQueue<Integer>();
+	private final ArrayBlockingQueue<Integer> queue = new ArrayBlockingQueue<Integer>(64);
 
 	@Override
 	public void run() {
@@ -32,30 +31,30 @@ public class AsyncBlockingInputStream extends InputStream implements Runnable {
 			int i = 0;
 			while (i >= 0) {
 				i = in.read();
-				queue.add(i);
+				queue.put(i);
 			}
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+		} catch (IOException | InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
-	public int read() throws IOException {
+	public int read() {
 		try {
 			return queue.take();
 		} catch (InterruptedException e) {
-			throw new IOException(e);
+			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
-		// read one byte and no more
+		// read exactly one byte so we block if and when we run out of bytes to read
 		return super.read(b, off, len > 1 ? 1 : len);
 	}
 
 	@Override
-	public int available() throws IOException {
+	public int available() {
 		return queue.size();
 	}
 
