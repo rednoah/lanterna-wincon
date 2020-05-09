@@ -49,7 +49,8 @@ public class AsyncBlockingInputStream extends InputStream implements Runnable {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
-		// read exactly one byte so we block if and when we run out of bytes to read
+		// read exactly one byte (e.g. keystroke) and no more so we block only if and
+		// when we run out of individual bytes to read
 		return super.read(b, off, len > 1 ? 1 : len);
 	}
 
