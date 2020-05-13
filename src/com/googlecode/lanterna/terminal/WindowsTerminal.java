@@ -121,7 +121,9 @@ public class WindowsTerminal extends UnixLikeTerminal {
 
 	@Override
 	public void registerTerminalResizeListener(Runnable runnable) throws IOException {
-		CONSOLE_INPUT.onWindowBufferSizeEvent(evt -> runnable.run());
+		CONSOLE_INPUT.onWindowBufferSizeEvent(evt -> {
+			onResized(evt.dwSize.X.intValue(), evt.dwSize.Y.intValue());
+		});
 	}
 
 	public TerminalPosition getCursorPosition() {
