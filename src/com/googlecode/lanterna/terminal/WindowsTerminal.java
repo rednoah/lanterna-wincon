@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import com.googlecode.lanterna.TerminalPosition;
@@ -23,17 +24,18 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	private static final HANDLE CONSOLE_INPUT_HANDLE = Wincon.INSTANCE.GetStdHandle(Wincon.STD_INPUT_HANDLE);
 	private static final HANDLE CONSOLE_OUTPUT_HANDLE = Wincon.INSTANCE.GetStdHandle(Wincon.STD_OUTPUT_HANDLE);
 
-	private static final Charset CONSOLE_INPUT_CHARSET = Charset.defaultCharset();
-	private static final WindowsConsoleInputStream CONSOLE_INPUT = new WindowsConsoleInputStream(CONSOLE_INPUT_HANDLE, CONSOLE_INPUT_CHARSET);
+	private static final Charset CONSOLE_CHARSET = StandardCharsets.UTF_8;
+	private static final WindowsConsoleInputStream CONSOLE_INPUT = new WindowsConsoleInputStream(CONSOLE_INPUT_HANDLE, CONSOLE_CHARSET);
+	private static final WindowsConsoleOutputStream CONSOLE_OUTPUT = new WindowsConsoleOutputStream(CONSOLE_OUTPUT_HANDLE, CONSOLE_CHARSET);
 
 	private int[] settings;
 
 	public WindowsTerminal() throws IOException {
-		this(CONSOLE_INPUT, System.out, CONSOLE_INPUT_CHARSET, CtrlCBehaviour.CTRL_C_KILLS_APPLICATION);
+		this(CONSOLE_INPUT, CONSOLE_OUTPUT, CONSOLE_CHARSET, CtrlCBehaviour.CTRL_C_KILLS_APPLICATION);
 	}
 
 	public WindowsTerminal(InputStream terminalInput, OutputStream terminalOutput, Charset terminalCharset, CtrlCBehaviour terminalCtrlCBehaviour) throws IOException {
-		super(CONSOLE_INPUT, terminalOutput, CONSOLE_INPUT_CHARSET, terminalCtrlCBehaviour);
+		super(CONSOLE_INPUT, CONSOLE_OUTPUT, CONSOLE_CHARSET, terminalCtrlCBehaviour);
 	}
 
 	@Override
