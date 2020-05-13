@@ -13,6 +13,7 @@ import com.googlecode.lanterna.input.CharacterPattern;
 import com.googlecode.lanterna.input.KeyDecodingProfile;
 import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
+import com.googlecode.lanterna.terminal.WinDef.CONSOLE_SCREEN_BUFFER_INFO;
 import com.googlecode.lanterna.terminal.ansi.UnixLikeTerminal;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.ptr.IntByReference;
@@ -22,14 +23,17 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	private static final HANDLE CONSOLE_INPUT_HANDLE = Wincon.INSTANCE.GetStdHandle(Wincon.STD_INPUT_HANDLE);
 	private static final HANDLE CONSOLE_OUTPUT_HANDLE = Wincon.INSTANCE.GetStdHandle(Wincon.STD_OUTPUT_HANDLE);
 
+	private static final Charset CONSOLE_INPUT_CHARSET = Charset.defaultCharset();
+	private static final WindowsConsoleInputStream CONSOLE_INPUT = new WindowsConsoleInputStream(CONSOLE_INPUT_HANDLE, CONSOLE_INPUT_CHARSET);
+
 	private int[] settings;
 
 	public WindowsTerminal() throws IOException {
-		this(System.in, System.out, Charset.defaultCharset(), CtrlCBehaviour.CTRL_C_KILLS_APPLICATION);
+		this(CONSOLE_INPUT, System.out, CONSOLE_INPUT_CHARSET, CtrlCBehaviour.CTRL_C_KILLS_APPLICATION);
 	}
 
 	public WindowsTerminal(InputStream terminalInput, OutputStream terminalOutput, Charset terminalCharset, CtrlCBehaviour terminalCtrlCBehaviour) throws IOException {
-		super(new AsyncBlockingInputStream(terminalInput), terminalOutput, terminalCharset, terminalCtrlCBehaviour);
+		super(CONSOLE_INPUT, terminalOutput, CONSOLE_INPUT_CHARSET, terminalCtrlCBehaviour);
 	}
 
 	@Override
@@ -59,12 +63,12 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	}
 
 	@Override
-	public synchronized void saveTerminalSettings() throws IOException {
+	public void saveTerminalSettings() throws IOException {
 		settings = new int[] { getConsoleInputMode(), getConsoleOutputMode() };
 	}
 
 	@Override
-	public synchronized void restoreTerminalSettings() throws IOException {
+	public void restoreTerminalSettings() throws IOException {
 		if (settings != null) {
 			Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT_HANDLE, settings[0]);
 			Wincon.INSTANCE.SetConsoleMode(CONSOLE_OUTPUT_HANDLE, settings[1]);
@@ -72,7 +76,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	}
 
 	@Override
-	public synchronized void keyEchoEnabled(boolean enabled) throws IOException {
+	public void keyEchoEnabled(boolean enabled) throws IOException {
 		int mode = getConsoleInputMode();
 		if (enabled) {
 			mode |= Wincon.ENABLE_ECHO_INPUT;
@@ -83,7 +87,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	}
 
 	@Override
-	public synchronized void canonicalMode(boolean enabled) throws IOException {
+	public void canonicalMode(boolean enabled) throws IOException {
 		int mode = getConsoleInputMode();
 		if (enabled) {
 			mode |= Wincon.ENABLE_LINE_INPUT;
@@ -94,7 +98,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	}
 
 	@Override
-	public synchronized void keyStrokeSignalsEnabled(boolean enabled) throws IOException {
+	public void keyStrokeSignalsEnabled(boolean enabled) throws IOException {
 		int mode = getConsoleInputMode();
 		if (enabled) {
 			mode |= Wincon.ENABLE_PROCESSED_INPUT;
@@ -106,23 +110,23 @@ public class WindowsTerminal extends UnixLikeTerminal {
 
 	@Override
 	protected TerminalSize findTerminalSize() throws IOException {
-		WinDef.CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo = new WinDef.CONSOLE_SCREEN_BUFFER_INFO();
+		CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo = new CONSOLE_SCREEN_BUFFER_INFO();
 		Wincon.INSTANCE.GetConsoleScreenBufferInfo(CONSOLE_OUTPUT_HANDLE, screenBufferInfo);
-		int columns = screenBufferInfo.srWindow.Right - screenBufferInfo.srWindow.Left + 1;
-		int rows = screenBufferInfo.srWindow.Bottom - screenBufferInfo.srWindow.Top + 1;
+		int columns = screenBufferInfo.srWindow.Right.intValue() - screenBufferInfo.srWindow.Left.intValue() + 1;
+		int rows = screenBufferInfo.srWindow.Bottom.intValue() - screenBufferInfo.srWindow.Top.intValue() + 1;
 		return new TerminalSize(columns, rows);
 	}
 
 	@Override
 	public void registerTerminalResizeListener(Runnable runnable) throws IOException {
-		// not implemented
+		CONSOLE_INPUT.onWindowBufferSizeEvent(evt -> runnable.run());
 	}
 
-	public synchronized TerminalPosition getCursorPosition() {
-		WinDef.CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo = new WinDef.CONSOLE_SCREEN_BUFFER_INFO();
+	public TerminalPosition getCursorPosition() {
+		CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo = new CONSOLE_SCREEN_BUFFER_INFO();
 		Wincon.INSTANCE.GetConsoleScreenBufferInfo(CONSOLE_OUTPUT_HANDLE, screenBufferInfo);
-		int column = screenBufferInfo.dwCursorPosition.X - screenBufferInfo.srWindow.Left;
-		int row = screenBufferInfo.dwCursorPosition.Y - screenBufferInfo.srWindow.Top;
+		int column = screenBufferInfo.dwCursorPosition.X.intValue() - screenBufferInfo.srWindow.Left.intValue();
+		int row = screenBufferInfo.dwCursorPosition.Y.intValue() - screenBufferInfo.srWindow.Top.intValue();
 		return new TerminalPosition(column, row);
 	}
 
