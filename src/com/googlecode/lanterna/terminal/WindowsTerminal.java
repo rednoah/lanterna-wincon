@@ -36,6 +36,11 @@ public class WindowsTerminal extends UnixLikeTerminal {
 
 	public WindowsTerminal(InputStream terminalInput, OutputStream terminalOutput, Charset terminalCharset, CtrlCBehaviour terminalCtrlCBehaviour) throws IOException {
 		super(CONSOLE_INPUT, CONSOLE_OUTPUT, CONSOLE_CHARSET, terminalCtrlCBehaviour);
+
+		// handle resize events
+		CONSOLE_INPUT.onWindowBufferSizeEvent(evt -> {
+			onResized(evt.dwSize.X.intValue(), evt.dwSize.Y.intValue());
+		});
 	}
 
 	@Override
@@ -121,9 +126,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 
 	@Override
 	public void registerTerminalResizeListener(Runnable runnable) throws IOException {
-		CONSOLE_INPUT.onWindowBufferSizeEvent(evt -> {
-			onResized(evt.dwSize.X.intValue(), evt.dwSize.Y.intValue());
-		});
+		// ignore
 	}
 
 	public TerminalPosition getCursorPosition() {
