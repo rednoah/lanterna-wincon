@@ -1,1 +1,1 @@
-java -cp "bin;lib/*" FileDialog.java
+java -cp "bin;lib/*" FileDialog

@@ -12,8 +12,8 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 	@FieldOrder({ "X", "Y" })
 	public static class COORD extends Structure {
 
-		public SHORT X;
-		public SHORT Y;
+		public short X;
+		public short Y;
 
 		@Override
 		public String toString() {
@@ -27,10 +27,10 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 	@FieldOrder({ "Left", "Top", "Right", "Bottom" })
 	public static class SMALL_RECT extends Structure {
 
-		public SHORT Left;
-		public SHORT Top;
-		public SHORT Right;
-		public SHORT Bottom;
+		public short Left;
+		public short Top;
+		public short Right;
+		public short Bottom;
 
 		@Override
 		public String toString() {
@@ -46,7 +46,7 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 
 		public COORD dwSize;
 		public COORD dwCursorPosition;
-		public WORD wAttributes;
+		public short wAttributes;
 		public SMALL_RECT srWindow;
 		public COORD dwMaximumWindowSize;
 
@@ -59,14 +59,14 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 	@FieldOrder({ "EventType", "Event" })
 	public static class INPUT_RECORD extends Structure {
 
-		public static final byte KEY_EVENT = 0x01;
-		public static final byte MOUSE_EVENT = 0x02;
-		public static final byte WINDOW_BUFFER_SIZE_EVENT = 0x04;
+		public static final short KEY_EVENT = 0x01;
+		public static final short MOUSE_EVENT = 0x02;
+		public static final short WINDOW_BUFFER_SIZE_EVENT = 0x04;
 
-		public WORD EventType;
-		public UNION Event;
+		public short EventType;
+		public Event Event;
 
-		public static class UNION extends Union {
+		public static class Event extends Union {
 			public KEY_EVENT_RECORD KeyEvent;
 			public MOUSE_EVENT_RECORD MouseEvent;
 			public WINDOW_BUFFER_SIZE_RECORD WindowBufferSizeEvent;
@@ -75,20 +75,18 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 		@Override
 		public void read() {
 			super.read();
-			switch (EventType.byteValue()) {
+			switch (EventType) {
 			case KEY_EVENT:
-				Event.setType(KEY_EVENT_RECORD.class);
-				Event.read();
+				Event.setType("KeyEvent");
 				break;
 			case MOUSE_EVENT:
-				Event.setType(MOUSE_EVENT_RECORD.class);
-				Event.read();
+				Event.setType("MouseEvent");
 				break;
 			case WINDOW_BUFFER_SIZE_EVENT:
-				Event.setType(WINDOW_BUFFER_SIZE_RECORD.class);
-				Event.read();
+				Event.setType("WindowBufferSizeEvent");
 				break;
 			}
+			Event.read();
 		}
 
 		@Override
@@ -100,12 +98,12 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 	@FieldOrder({ "bKeyDown", "wRepeatCount", "wVirtualKeyCode", "wVirtualScanCode", "uChar", "dwControlKeyState" })
 	public static class KEY_EVENT_RECORD extends Structure {
 
-		public BOOL bKeyDown;
-		public WORD wRepeatCount;
-		public WORD wVirtualKeyCode;
-		public WORD wVirtualScanCode;
+		public boolean bKeyDown;
+		public short wRepeatCount;
+		public short wVirtualKeyCode;
+		public short wVirtualScanCode;
 		public char uChar;
-		public DWORD dwControlKeyState;
+		public int dwControlKeyState;
 
 		@Override
 		public String toString() {
@@ -117,9 +115,9 @@ public interface WinDef extends com.sun.jna.platform.win32.WinDef {
 	public static class MOUSE_EVENT_RECORD extends Structure {
 
 		public COORD dwMousePosition;
-		public DWORD dwButtonState;
-		public DWORD dwControlKeyState;
-		public DWORD dwEventFlags;
+		public int dwButtonState;
+		public int dwControlKeyState;
+		public int dwEventFlags;
 
 		@Override
 		public String toString() {

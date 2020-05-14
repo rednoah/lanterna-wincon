@@ -13,35 +13,45 @@ import com.googlecode.lanterna.terminal.WinDef.INPUT_RECORD;
 import com.googlecode.lanterna.terminal.WinDef.KEY_EVENT_RECORD;
 import com.googlecode.lanterna.terminal.WinDef.MOUSE_EVENT_RECORD;
 import com.googlecode.lanterna.terminal.WinDef.WINDOW_BUFFER_SIZE_RECORD;
-import com.sun.jna.platform.win32.WinDef.DWORD;
-import com.sun.jna.platform.win32.WinDef.DWORDByReference;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
+import com.sun.jna.ptr.IntByReference;
 
 public class WindowsConsoleInputStream extends InputStream {
 
 	private final HANDLE hConsoleInput;
-	private final Charset charset;
+	private final Charset encoder;
 
-	public WindowsConsoleInputStream(HANDLE hConsoleInput, Charset charset) {
+	public WindowsConsoleInputStream(Charset encoder) {
+		this(Wincon.INSTANCE.GetStdHandle(Wincon.STD_INPUT_HANDLE), encoder);
+	}
+
+	public WindowsConsoleInputStream(HANDLE hConsoleInput, Charset encoder) {
 		this.hConsoleInput = hConsoleInput;
-		this.charset = charset;
+		this.encoder = encoder;
+	}
+
+	public HANDLE getHandle() {
+		return hConsoleInput;
+	}
+
+	public Charset getEncoder() {
+		return encoder;
 	}
 
 	private INPUT_RECORD[] readConsoleInput() throws IOException {
 		INPUT_RECORD[] lpBuffer = new INPUT_RECORD[64];
-		DWORD nLength = new DWORD(lpBuffer.length);
-		DWORDByReference lpNumberOfEventsRead = new DWORDByReference();
-		if (Wincon.INSTANCE.ReadConsoleInput(hConsoleInput, lpBuffer, nLength, lpNumberOfEventsRead)) {
-			int n = lpNumberOfEventsRead.getValue().intValue();
+		IntByReference lpNumberOfEventsRead = new IntByReference();
+		if (Wincon.INSTANCE.ReadConsoleInput(hConsoleInput, lpBuffer, lpBuffer.length, lpNumberOfEventsRead)) {
+			int n = lpNumberOfEventsRead.getValue();
 			return Arrays.copyOfRange(lpBuffer, 0, n);
 		}
 		throw new EOFException();
 	}
 
 	private int availableConsoleInput() {
-		DWORDByReference lpcNumberOfEvents = new DWORDByReference();
+		IntByReference lpcNumberOfEvents = new IntByReference();
 		if (Wincon.INSTANCE.GetNumberOfConsoleInputEvents(hConsoleInput, lpcNumberOfEvents)) {
-			return lpcNumberOfEvents.getValue().intValue();
+			return lpcNumberOfEvents.getValue();
 		}
 		return 0;
 	}
@@ -59,7 +69,6 @@ public class WindowsConsoleInputStream extends InputStream {
 
 	@Override
 	public synchronized int read(byte[] b, int offset, int length) throws IOException {
-		// read more
 		while (length > 0 && !buffer.hasRemaining()) {
 			buffer = readKeyEvents(true);
 		}
@@ -88,13 +97,13 @@ public class WindowsConsoleInputStream extends InputStream {
 			}
 		}
 
-		return charset.encode(CharBuffer.wrap(keyEvents));
+		return encoder.encode(CharBuffer.wrap(keyEvents));
 	}
 
 	private void filter(INPUT_RECORD input, Appendable keyEvents) throws IOException {
-		switch (input.EventType.byteValue()) {
+		switch (input.EventType) {
 		case INPUT_RECORD.KEY_EVENT:
-			if (input.Event.KeyEvent.uChar != 0 && input.Event.KeyEvent.bKeyDown.booleanValue()) {
+			if (input.Event.KeyEvent.uChar != 0 && input.Event.KeyEvent.bKeyDown) {
 				keyEvents.append(input.Event.KeyEvent.uChar);
 			}
 			if (keyEventHandler != null) {

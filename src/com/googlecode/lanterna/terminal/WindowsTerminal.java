@@ -16,17 +16,13 @@ import com.googlecode.lanterna.input.KeyStroke;
 import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.terminal.WinDef.CONSOLE_SCREEN_BUFFER_INFO;
 import com.googlecode.lanterna.terminal.ansi.UnixLikeTerminal;
-import com.sun.jna.platform.win32.WinNT.HANDLE;
 import com.sun.jna.ptr.IntByReference;
 
 public class WindowsTerminal extends UnixLikeTerminal {
 
-	private static final HANDLE CONSOLE_INPUT_HANDLE = Wincon.INSTANCE.GetStdHandle(Wincon.STD_INPUT_HANDLE);
-	private static final HANDLE CONSOLE_OUTPUT_HANDLE = Wincon.INSTANCE.GetStdHandle(Wincon.STD_OUTPUT_HANDLE);
-
 	private static final Charset CONSOLE_CHARSET = StandardCharsets.UTF_8;
-	private static final WindowsConsoleInputStream CONSOLE_INPUT = new WindowsConsoleInputStream(CONSOLE_INPUT_HANDLE, CONSOLE_CHARSET);
-	private static final WindowsConsoleOutputStream CONSOLE_OUTPUT = new WindowsConsoleOutputStream(CONSOLE_OUTPUT_HANDLE, CONSOLE_CHARSET);
+	private static final WindowsConsoleInputStream CONSOLE_INPUT = new WindowsConsoleInputStream(CONSOLE_CHARSET);
+	private static final WindowsConsoleOutputStream CONSOLE_OUTPUT = new WindowsConsoleOutputStream(CONSOLE_CHARSET);
 
 	private int[] settings;
 
@@ -39,7 +35,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 
 		// handle resize events
 		CONSOLE_INPUT.onWindowBufferSizeEvent(evt -> {
-			onResized(evt.dwSize.X.intValue(), evt.dwSize.Y.intValue());
+			onResized(evt.dwSize.X, evt.dwSize.Y);
 		});
 	}
 
@@ -60,13 +56,13 @@ public class WindowsTerminal extends UnixLikeTerminal {
 		int terminalOutputMode = getConsoleOutputMode();
 		terminalOutputMode |= Wincon.ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 		terminalOutputMode |= Wincon.DISABLE_NEWLINE_AUTO_RETURN;
-		Wincon.INSTANCE.SetConsoleMode(CONSOLE_OUTPUT_HANDLE, terminalOutputMode);
+		Wincon.INSTANCE.SetConsoleMode(CONSOLE_OUTPUT.getHandle(), terminalOutputMode);
 
 		int terminalInputMode = getConsoleInputMode();
 		terminalInputMode |= Wincon.ENABLE_MOUSE_INPUT;
 		terminalInputMode |= Wincon.ENABLE_WINDOW_INPUT;
 		terminalInputMode |= Wincon.ENABLE_VIRTUAL_TERMINAL_INPUT;
-		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT_HANDLE, terminalInputMode);
+		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT.getHandle(), terminalInputMode);
 	}
 
 	@Override
@@ -77,8 +73,8 @@ public class WindowsTerminal extends UnixLikeTerminal {
 	@Override
 	public void restoreTerminalSettings() throws IOException {
 		if (settings != null) {
-			Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT_HANDLE, settings[0]);
-			Wincon.INSTANCE.SetConsoleMode(CONSOLE_OUTPUT_HANDLE, settings[1]);
+			Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT.getHandle(), settings[0]);
+			Wincon.INSTANCE.SetConsoleMode(CONSOLE_OUTPUT.getHandle(), settings[1]);
 		}
 	}
 
@@ -90,7 +86,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 		} else {
 			mode &= ~Wincon.ENABLE_ECHO_INPUT;
 		}
-		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT_HANDLE, mode);
+		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT.getHandle(), mode);
 	}
 
 	@Override
@@ -101,7 +97,7 @@ public class WindowsTerminal extends UnixLikeTerminal {
 		} else {
 			mode &= ~Wincon.ENABLE_LINE_INPUT;
 		}
-		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT_HANDLE, mode);
+		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT.getHandle(), mode);
 	}
 
 	@Override
@@ -112,15 +108,15 @@ public class WindowsTerminal extends UnixLikeTerminal {
 		} else {
 			mode &= ~Wincon.ENABLE_PROCESSED_INPUT;
 		}
-		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT_HANDLE, mode);
+		Wincon.INSTANCE.SetConsoleMode(CONSOLE_INPUT.getHandle(), mode);
 	}
 
 	@Override
 	protected TerminalSize findTerminalSize() throws IOException {
 		CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo = new CONSOLE_SCREEN_BUFFER_INFO();
-		Wincon.INSTANCE.GetConsoleScreenBufferInfo(CONSOLE_OUTPUT_HANDLE, screenBufferInfo);
-		int columns = screenBufferInfo.srWindow.Right.intValue() - screenBufferInfo.srWindow.Left.intValue() + 1;
-		int rows = screenBufferInfo.srWindow.Bottom.intValue() - screenBufferInfo.srWindow.Top.intValue() + 1;
+		Wincon.INSTANCE.GetConsoleScreenBufferInfo(CONSOLE_OUTPUT.getHandle(), screenBufferInfo);
+		int columns = screenBufferInfo.srWindow.Right - screenBufferInfo.srWindow.Left + 1;
+		int rows = screenBufferInfo.srWindow.Bottom - screenBufferInfo.srWindow.Top + 1;
 		return new TerminalSize(columns, rows);
 	}
 
@@ -131,21 +127,21 @@ public class WindowsTerminal extends UnixLikeTerminal {
 
 	public TerminalPosition getCursorPosition() {
 		CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo = new CONSOLE_SCREEN_BUFFER_INFO();
-		Wincon.INSTANCE.GetConsoleScreenBufferInfo(CONSOLE_OUTPUT_HANDLE, screenBufferInfo);
-		int column = screenBufferInfo.dwCursorPosition.X.intValue() - screenBufferInfo.srWindow.Left.intValue();
-		int row = screenBufferInfo.dwCursorPosition.Y.intValue() - screenBufferInfo.srWindow.Top.intValue();
+		Wincon.INSTANCE.GetConsoleScreenBufferInfo(CONSOLE_OUTPUT.getHandle(), screenBufferInfo);
+		int column = screenBufferInfo.dwCursorPosition.X - screenBufferInfo.srWindow.Left;
+		int row = screenBufferInfo.dwCursorPosition.Y - screenBufferInfo.srWindow.Top;
 		return new TerminalPosition(column, row);
 	}
 
 	private int getConsoleInputMode() {
 		IntByReference lpMode = new IntByReference();
-		Wincon.INSTANCE.GetConsoleMode(CONSOLE_INPUT_HANDLE, lpMode);
+		Wincon.INSTANCE.GetConsoleMode(CONSOLE_INPUT.getHandle(), lpMode);
 		return lpMode.getValue();
 	}
 
 	private int getConsoleOutputMode() {
 		IntByReference lpMode = new IntByReference();
-		Wincon.INSTANCE.GetConsoleMode(CONSOLE_OUTPUT_HANDLE, lpMode);
+		Wincon.INSTANCE.GetConsoleMode(CONSOLE_OUTPUT.getHandle(), lpMode);
 		return lpMode.getValue();
 	}
 }

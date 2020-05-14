@@ -3,10 +3,9 @@ package com.googlecode.lanterna.terminal;
 import com.googlecode.lanterna.terminal.WinDef.CONSOLE_SCREEN_BUFFER_INFO;
 import com.googlecode.lanterna.terminal.WinDef.INPUT_RECORD;
 import com.sun.jna.Native;
-import com.sun.jna.platform.win32.WinDef.DWORD;
-import com.sun.jna.platform.win32.WinDef.DWORDByReference;
 import com.sun.jna.platform.win32.WinDef.LPVOID;
 import com.sun.jna.platform.win32.WinNT.HANDLE;
+import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 
@@ -20,10 +19,10 @@ public interface Wincon extends StdCallLibrary, com.sun.jna.platform.win32.Winco
 
 	boolean GetConsoleScreenBufferInfo(HANDLE hConsoleOutput, CONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
 
-	boolean ReadConsoleInput(HANDLE hConsoleInput, INPUT_RECORD[] lpBuffer, DWORD nLength, DWORDByReference lpNumberOfEventsRead);
+	boolean ReadConsoleInput(HANDLE hConsoleInput, INPUT_RECORD[] lpBuffer, int nLength, IntByReference lpNumberOfEventsRead);
 
-	boolean GetNumberOfConsoleInputEvents(HANDLE hConsoleInput, DWORDByReference lpcNumberOfEvents);
+	boolean GetNumberOfConsoleInputEvents(HANDLE hConsoleInput, IntByReference lpcNumberOfEvents);
 
-	boolean WriteConsole(HANDLE hConsoleOutput, String lpBuffer, DWORD nNumberOfCharsToWrite, DWORDByReference lpNumberOfCharsWritten, LPVOID lpReserved);
+	boolean WriteConsole(HANDLE hConsoleOutput, String lpBuffer, int nNumberOfCharsToWrite, IntByReference lpNumberOfCharsWritten, LPVOID lpReserved);
 
 }
