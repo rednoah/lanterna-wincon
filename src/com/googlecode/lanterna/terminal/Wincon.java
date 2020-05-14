@@ -21,8 +21,6 @@ public interface Wincon extends StdCallLibrary, com.sun.jna.platform.win32.Winco
 
 	boolean ReadConsoleInput(HANDLE hConsoleInput, INPUT_RECORD[] lpBuffer, int nLength, IntByReference lpNumberOfEventsRead);
 
-	boolean GetNumberOfConsoleInputEvents(HANDLE hConsoleInput, IntByReference lpcNumberOfEvents);
-
 	boolean WriteConsole(HANDLE hConsoleOutput, String lpBuffer, int nNumberOfCharsToWrite, IntByReference lpNumberOfCharsWritten, LPVOID lpReserved);
 
 }
